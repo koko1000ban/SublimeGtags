@@ -46,9 +46,10 @@ def run_on_cwd(dir=None):
     def wrapper(func):
         view = window.active_view()
         fname = view.file_name()
-        if not fname:
-            sublime.error_message("do after save view:%s 's file." % view.name())
-            return
+
+        # if not fname:
+        #     sublime.error_message("do after save view:%s 's file." % view.name())
+        #     return
         
         if dir is None:
             tags_root = find_tags_root(dirname(fname))
@@ -82,7 +83,6 @@ class GtagsJumpBack(sublime_plugin.WindowCommand):
             cls.last.append((fn, `view.sel()[0]`))
 
 def gtags_jump_keyword(view, tags, keyword_or_items, jump_directly_if_one=False):
-
     if isinstance(keyword_or_items, list):
         items = keyword_or_items
         pass
@@ -91,12 +91,13 @@ def gtags_jump_keyword(view, tags, keyword_or_items, jump_directly_if_one=False)
     else:
         error_message("keyword_or_items's type(%s) is unsupported." % type(keyword_or_items))
         return
-
+    
     def on_select(i):
-        GtagsJumpBack.append(view)
-        view.window().open_file("%s:%d:%d" % (normpath(items[i]['path']), int(items[i]['linenum']), 0), sublime.ENCODED_POSITION)
-
-    if jump_directly_if_one and len(items) == 1:
+        if i != -1:
+            GtagsJumpBack.append(view)
+            view.window().open_file("%s:%d:%d" % (normpath(items[i]['path']), int(items[i]['linenum']), 0), sublime.ENCODED_POSITION)
+    
+    if jump_directly_if_one or len(items) == 1:
         on_select(0)
     else:
         view.window().show_quick_panel(["%s\t%s" % (item['path'], item['fields']) for item in items], on_select)
