@@ -1,0 +1,15 @@
+[
+  {
+    "caption": "-"
+  },
+  {
+    "command": "gtags_navigate_to_definition", 
+    "args": {}, 
+    "caption": "Navigate to Definition"
+  }, 
+  {
+    "command": "jump_back", 
+    "args": {}, 
+    "caption": "Jump Back"
+  }
+]

@@ -1,0 +1,3 @@
+[
+	{ "caption": "GTags: Rebuild Tags", "command": "gtags_rebuild_tags", "args":{"dirs":[]}}
+]

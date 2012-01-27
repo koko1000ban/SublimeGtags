@@ -1,0 +1,27 @@
+[
+  {
+    "command": "gtags_navigate_to_definition",
+    "context": [],
+    "keys": ["alt+."]
+  }, 
+  {
+    "command": "gtags_jump_back",
+    "keys": ["alt+,"]
+  },
+  {
+    "command": "gtags_rebuild_tags",
+    "context": [],
+    "keys": ["ctrl+t", "ctrl+r"]
+  }, 
+  {
+    "command": "gtags_show_symbols", 
+    "keys": ["ctrl+t", "ctrl+s"]
+  },
+  { // override current default
+    "keys": ["ctrl+t"],
+    "command": "transpose",
+    "context": [
+      { "key": "num_selections", "operator": "not_equal", "operand": 1 }
+    ]
+  }
+]

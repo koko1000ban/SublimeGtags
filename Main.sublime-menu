@@ -1,0 +1,31 @@
+[
+    {
+        "id": "find",
+        "children":
+        [
+          {
+            "caption": "-",
+            "id": "find_tools_ctags"
+          },
+          {
+            "caption": "GTags",
+            "id": "gtags",
+            "children":
+            [
+              {
+                "command": "gtags_navigate_to_definition"
+              }, 
+              {
+                "command": "jump_back"
+              },
+              {
+                "command": "gtags_show_symbols"
+              },
+              {
+                "command": "gtags_rebuild_tags"
+              }
+            ]
+          }
+        ]
+    }
+]

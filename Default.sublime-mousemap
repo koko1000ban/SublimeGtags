@@ -1,0 +1,8 @@
+[
+	{
+		"button": "button1",
+		"count": 1,
+		"modifiers": ["ctrl","shift"],
+		"press_command": "gtags_navigate_to_definition"
+	}
+]
