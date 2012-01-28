@@ -19,15 +19,19 @@ class one_shot(object):
         self.callbacks.append(self)
         self.remove = lambda: self.callbacks.remove(self)
 
-def on_load(f=None, window=None, encoded_row_col=True, begin_edit=False):
+def select(view, region):
+    sel_set = view.sel()
+    sel_set.clear()
+    sel_set.add(region)
+    view.show(region)
+
+def on_load(f=None, window=None, encoded_row_col=True):
     window = window or sublime.active_window()
     def wrapper(cb):
         if not f: return cb(window.active_view())
         view = window.open_file( normpath(f), encoded_row_col )
         def wrapped():
-            if begin_edit:
-                with edition(view): cb(view)
-            else: cb(view)
+            cb(view)
 
         if view.is_loading():
             class set_on_load(one_shot):
@@ -46,10 +50,6 @@ def run_on_cwd(dir=None):
     def wrapper(func):
         view = window.active_view()
         fname = view.file_name()
-
-        # if not fname:
-        #     sublime.error_message("do after save view:%s 's file." % view.name())
-        #     return
         
         if dir is None:
             tags_root = find_tags_root(dirname(fname))
@@ -71,7 +71,7 @@ class GtagsJumpBack(sublime_plugin.WindowCommand):
         self.jump(f, eval(sel))
     
     def jump(self, fn, sel):
-        @on_load(fn, begin_edit=True)
+        @on_load(fn)
         def and_then(view):
             select(view, sublime.Region(*sel))
     
