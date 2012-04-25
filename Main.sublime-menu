@@ -5,7 +5,7 @@
         [
           {
             "caption": "-",
-            "id": "find_tools_ctags"
+            "id": "find_tools_gtags"
           },
           {
             "caption": "GTags",
@@ -14,6 +14,9 @@
             [
               {
                 "command": "gtags_navigate_to_definition"
+              }, 
+              {
+                "command": "gtags_find_references"
               }, 
               {
                 "command": "jump_back"
@@ -27,5 +30,41 @@
             ]
           }
         ]
+    },
+    {      
+        "caption": "Preferences",
+        "mnemonic": "n",
+        "id": "preferences",
+        "children":
+        [
+            {
+                "caption": "Package Settings",
+                "mnemonic": "P",
+                "id": "package-settings",
+                "children":
+                [
+                    {
+                        "caption": "SublimeGtags",
+                        "children":
+                        [
+                            {
+                                "command": "open_file", "args":
+                                {
+                                    "file": "${packages}/SublimeGtags/GTags.sublime-settings"
+                                },
+                                "caption": "Settings – Default"
+                            },
+                            {
+                                "command": "open_file", "args":
+                                {
+                                    "file": "${packages}/User/GTags.sublime-settings"
+                                },
+                                "caption": "Settings – User"
+                            }
+                        ]
+                     }
+                 ]
+             }
+         ]
     }
 ]

@@ -1,4 +1,7 @@
 {
+    //switch debug mode 
     "debug"           :  false,
-    "extra_tag_files" : []
+
+    // a list of other locations to look up (GTAGSLIBPATH)
+    "extra_tag_paths" : []
 }

@@ -58,8 +58,8 @@ def run_on_cwd(dir=None):
                 return
         else:
             tags_root = dir[0]
-        
-        tags = TagFile(tags_root)
+            
+        tags = TagFile(tags_root, setting('extra_tag_paths'))
         func(view, tags, tags_root)
 
     return wrapper
@@ -128,6 +128,19 @@ class GtagsNavigateToDefinition(sublime_plugin.TextCommand):
                 return
 
             gtags_jump_keyword(view, tags, matches)
+
+class GtagsFindReferences(sublime_plugin.TextCommand):
+    def run(self, edit):
+        @run_on_cwd()
+        def and_then(view, tags, root):
+            symbol = view.substr(view.word(view.sel()[0]))
+            matches = tags.rmatch(symbol)
+            if not matches:
+                status_message("'%s' is not found on rtag." % symbol)
+                return
+            
+            gtags_jump_keyword(view, tags, matches)
+    
         
 class GtagsRebuildTags(sublime_plugin.TextCommand):
     def run(self, edit, **args):
