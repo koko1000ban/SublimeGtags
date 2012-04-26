@@ -29,5 +29,10 @@ clone this repo directly into your Packages directory.
 ## See
  [CTags Plugin](https://github.com/SublimeText/CTags)
 
+## Support
+If you find something wrong with the plugin, the documentation, or wish to request a feature, let me know on the project’s issue page.  
+
+Thanks :)
+
 ## Screenshot
 ![](http://dl.dropbox.com/u/32342/github/sublime-gtags1.png)
