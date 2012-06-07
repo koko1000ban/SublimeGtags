@@ -8,7 +8,6 @@ import subprocess
 import re
 import pprint
 import unittest
-from os.path import normpath, dirname
 
 PP = pprint.PrettyPrinter(indent=4)
 
@@ -23,18 +22,19 @@ ENV_PATH = os.environ['PATH']
 IS_WINDOWS = platform.system() == 'Windows'
 
 
-def find_tags_root(dir, pre=None):
-    dir = normpath(dir)
-    par = os.path.dirname(dir)
-    if not os.path.exists(dir) or not os.path.isdir(dir):
-        return None
-    elif par == pre:
+def find_tags_root(current, previous=None):
+    current = os.path.normpath(current)
+    if not os.path.isdir(current):
         return None
 
-    for f in os.listdir(dir):
-        if f == 'GTAGS':
-            return dir
-    return find_tags_root(par, dir)
+    parent = os.path.dirname(current)
+    if parent == previous:
+        return None
+
+    if 'GTAGS' in os.listdir(current):
+        return current
+
+    return find_tags_root(parent, current)
 
 
 class TagFile(object):
