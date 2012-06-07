@@ -50,7 +50,7 @@ def run_on_cwd(dir=None):
     def wrapper(func):
         view = window.active_view()
         fname = view.file_name()
-        
+
         if dir is None:
             tags_root = find_tags_root(dirname(fname))
             if tags_root is None:
@@ -58,7 +58,7 @@ def run_on_cwd(dir=None):
                 return
         else:
             tags_root = dir[0]
-            
+
         tags = TagFile(tags_root, setting('extra_tag_paths'))
         func(view, tags, tags_root)
 
@@ -69,12 +69,12 @@ class GtagsJumpBack(sublime_plugin.WindowCommand):
         if not GtagsJumpBack.last: return status_message('JumpBack buffer empty')
         f, sel = GtagsJumpBack.last.pop()
         self.jump(f, eval(sel))
-    
+
     def jump(self, fn, sel):
         @on_load(fn)
         def and_then(view):
             select(view, sublime.Region(*sel))
-    
+
     last    =     []
     @classmethod
     def append(cls, view):
@@ -91,12 +91,12 @@ def gtags_jump_keyword(view, tags, keyword_or_items, jump_directly_if_one=False)
     else:
         error_message("keyword_or_items's type(%s) is unsupported." % type(keyword_or_items))
         return
-    
+
     def on_select(i):
         if i != -1:
             GtagsJumpBack.append(view)
             view.window().open_file("%s:%d:%d" % (normpath(items[i]['path']), int(items[i]['linenum']), 0), sublime.ENCODED_POSITION)
-    
+
     if jump_directly_if_one or len(items) == 1:
         on_select(0)
     else:
@@ -114,7 +114,7 @@ class GtagsShowSymbols(sublime_plugin.TextCommand):
 
             def on_select(i):
                 gtags_jump_keyword(view, tags, items[i])
-            
+
             view.window().show_quick_panel(items, on_select)
 
 class GtagsNavigateToDefinition(sublime_plugin.TextCommand):
@@ -138,10 +138,10 @@ class GtagsFindReferences(sublime_plugin.TextCommand):
             if not matches:
                 status_message("'%s' is not found on rtag." % symbol)
                 return
-            
+
             gtags_jump_keyword(view, tags, matches)
-    
-        
+
+
 class GtagsRebuildTags(sublime_plugin.TextCommand):
     def run(self, edit, **args):
         @run_on_cwd(args.get('dirs'))
@@ -149,4 +149,3 @@ class GtagsRebuildTags(sublime_plugin.TextCommand):
             sublime.status_message("rebuild tags on dir: %s" % root)
             tags.rebuild()
             sublime.status_message("build success on dir: %s" % root)
-            
