@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import os
+import platform
+import shlex
 import subprocess
 import re
 import pprint
@@ -18,6 +20,8 @@ TAGS_RE = re.compile (
 )
 
 ENV_PATH = os.environ['PATH']
+IS_WINDOWS = platform.system() == 'Windows'
+
 
 def find_tags_root(dir, pre=None):
     dir = normpath(dir)
@@ -35,55 +39,68 @@ def find_tags_root(dir, pre=None):
 
 class TagFile(object):
     def _expand_path(self, path):
-        return os.path.expandvars(os.path.expanduser(path))
-    
+        path = os.path.expandvars(os.path.expanduser(path))
+        if IS_WINDOWS:
+            path = path.encode('utf-8')
+        return path
+
     def __init__(self, root_dir=None, extra_paths=[]):
         self.__env = {'PATH' : ENV_PATH}
         self.__root = root_dir
 
         if root_dir is not None:
             self.__env['GTAGSROOT'] = self._expand_path(root_dir)
-            
+
         if extra_paths:
-            self.__env['GTAGSLIBPATH'] = ":".join(map(self._expand_path, extra_paths))
+            self.__env['GTAGSLIBPATH'] = os.pathsep.join(
+                map(self._expand_path, extra_paths))
 
     def start_with(self, prefix):
-        out = subprocess.Popen(['global', '-c', prefix], stdout=subprocess.PIPE, env=self.__env).communicate()[0]
-        return out.rstrip().splitlines()
+        return self._shell('global -c %s' % prefix, stdout=subprocess.PIPE)
 
-    def _match(self, pattern, opts):
-        command = ['global', pattern]
-        command[1:1] = opts
-        
-        out = subprocess.Popen(command, stdout=subprocess.PIPE, env=self.__env).communicate()[0]
-        lines = out.rstrip().splitlines()
+    def _shell(self, command, **kwargs):
+        if isinstance(command, basestring):
+            if IS_WINDOWS:
+                command = command.encode('utf-8')
+            command = shlex.split(command)
+
+        if IS_WINDOWS:
+            kwargs['shell'] = True
+
+        process = subprocess.Popen(command, env=self.__env, **kwargs)
+        stdout, _ = process.communicate()
+        return stdout.rstrip().splitlines()
+
+    def _match(self, pattern, options):
+        lines = self._shell('global %s %s' % (options, pattern),
+            stdout=subprocess.PIPE)
         matches = []
         for search_obj in (t for t in (TAGS_RE.search(l) for l in lines) if t):
             matches.append(search_obj.groupdict())
         return matches
-        
-    
+
     def match(self, pattern):
-        return self._match(pattern, ['-a', '-x'])
+        return self._match(pattern, '-ax')
 
     def rmatch(self, pattern):
-        return self._match(pattern, ['-a', '-x', '-r'])
-    
+        return self._match(pattern, '-axr')
+
     def rebuild(self):
-        out = subprocess.Popen(['gtags', '-vv'], cwd=self.__root, shell=1, env=self.__env).communicate()[0]
+        self._shell('gtags -vv', cwd=self.__root)
+
 
 class GTagsTest(unittest.TestCase):
     def test_start_with(self):
         f = TagFile('$HOME/repos/work/val/e4/proto1/')
         assert len(f.start_with("Exp_Set")) == 4
-    
+
     def test_match(pattern):
         f = TagFile('$HOME/repos/work/val/e4/proto1/')
         matches = f.match("ExpAddData")
         assert len(matches) == 4
         assert matches[0]["path"] == "/Users/tabi/Dropbox/repos/work/val/e4/proto1/include/ExpData.h"
         assert matches[0]["linenum"] == '1463'
-    
+
     def test_start_with2(self):
         f = TagFile()
         assert len(f.start_with("Exp_Set")) == 0
@@ -94,14 +111,14 @@ class GTagsTest(unittest.TestCase):
         assert len(refs) == 22
         assert refs[0]["path"] == "/Users/tabi/Dropbox/repos/work/val/e4/proto1/include/ExpPrivate.h"
         assert refs[0]["linenum"] == '1270'
-    
+
     def test_extra_paths(self):
         f = TagFile("$HOME/tmp/sample", ["$HOME/repos/work/val/e4/proto1/", "~/pkg/llvm-trunk/tools/clang/"])
         matches = f.match("InitHeaderSearch")
         assert len(matches) == 1
         assert matches[0]["path"] == "/Users/tabi/pkg/llvm-trunk/tools/clang/lib/Frontend/InitHeaderSearch.cpp"
         assert matches[0]["linenum"] == '44'
-        
+
 
 if __name__ == '__main__':
     unittest.main()
