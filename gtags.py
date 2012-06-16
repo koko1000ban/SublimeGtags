@@ -3,15 +3,15 @@
 
 import os
 import platform
+import pprint
+import re
 import shlex
 import subprocess
-import re
-import pprint
 import unittest
 
 PP = pprint.PrettyPrinter(indent=4)
 
-TAGS_RE = re.compile (
+TAGS_RE = re.compile(
     '(?P<symbol>[^\s]+)\s+'
     '(?P<linenum>[^\s]+)\s+'
     '(?P<path>[^\s]+)\s+'
@@ -45,7 +45,7 @@ class TagFile(object):
         return path
 
     def __init__(self, root_dir=None, extra_paths=[]):
-        self.__env = {'PATH' : ENV_PATH}
+        self.__env = {'PATH': ENV_PATH}
         self.__root = root_dir
 
         if root_dir is not None:
