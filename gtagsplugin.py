@@ -12,37 +12,6 @@ import gtags
 from gtags import (TagFile, PP, find_tags_root)
 
 settings = sublime.load_settings('GTags.sublime-settings')
-ON_LOAD       = sublime_plugin.all_callbacks['on_load']
-
-class one_shot(object):
-    def __init__(self):
-        self.callbacks.append(self)
-        self.remove = lambda: self.callbacks.remove(self)
-
-def select(view, region):
-    sel_set = view.sel()
-    sel_set.clear()
-    sel_set.add(region)
-    view.show(region)
-
-def on_load(f=None, window=None, encoded_row_col=True):
-    window = window or sublime.active_window()
-    def wrapper(cb):
-        if not f: return cb(window.active_view())
-        view = window.open_file( normpath(f), encoded_row_col )
-        def wrapped():
-            cb(view)
-
-        if view.is_loading():
-            class set_on_load(one_shot):
-                callbacks = ON_LOAD
-                def on_load(self, view):
-                    try:wrapped()
-                    finally: self.remove()
-
-            set_on_load()
-        else: wrapped()
-    return wrapper
 
 
 def run_on_cwd(dir=None):
@@ -64,28 +33,46 @@ def run_on_cwd(dir=None):
 
     return wrapper
 
+
+class JumpHistory(object):
+    instance = None
+
+    def __init__(self):
+        self._storage = []
+
+    def append(self, view):
+        filename = view.file_name()
+        row, col = view.rowcol(view.sel()[0].begin())
+        self._storage.append('%s:%d:%d' % (filename, row + 1, col + 1))
+
+    def jump_back(self):
+        if self.empty():
+            sublime.status_message('Jump history is empty')
+        else:
+            filename = self._storage.pop()
+            sublime.active_window().open_file(filename, sublime.ENCODED_POSITION)
+
+    def jump_forward(self):
+        sublime.status_message('Not implemented')
+
+    def empty(self):
+        return len(self._storage) == 0
+
+
+def jump_history():
+    if JumpHistory.instance is None:
+        JumpHistory.instance = JumpHistory()
+    return JumpHistory.instance
+
+
 class GtagsJumpBack(sublime_plugin.WindowCommand):
-    def run(self, to=None):
-        if not GtagsJumpBack.last: return status_message('JumpBack buffer empty')
-        f, sel = GtagsJumpBack.last.pop()
-        self.jump(f, eval(sel))
-
-    def jump(self, fn, sel):
-        @on_load(fn)
-        def and_then(view):
-            select(view, sublime.Region(*sel))
-
-    last    =     []
-    @classmethod
-    def append(cls, view):
-        fn = view.file_name()
-        if fn:
-            cls.last.append((fn, `view.sel()[0]`))
+    def run(self):
+        jump_history().jump_back()
 
 
 def gtags_jump_keyword(view, keywords, root, showpanel=False):
     def jump(keyword):
-        GtagsJumpBack.append(view)
+        jump_history().append(view)
         position = '%s:%d:0' % (
             os.path.normpath(keyword['path']), int(keyword['linenum']))
         view.window().open_file(position, sublime.ENCODED_POSITION)
