@@ -134,7 +134,7 @@ class GtagsFindReferences(sublime_plugin.TextCommand):
         @run_on_cwd()
         def and_then(view, tags, root):
             symbol = view.substr(view.word(view.sel()[0]))
-            matches = tags.rmatch(symbol)
+            matches = tags.match(symbol, reference=True)
             if not matches:
                 status_message("'%s' is not found on rtag." % symbol)
                 return

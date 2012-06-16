@@ -79,11 +79,8 @@ class TagFile(object):
             matches.append(search_obj.groupdict())
         return matches
 
-    def match(self, pattern):
-        return self._match(pattern, '-ax')
-
-    def rmatch(self, pattern):
-        return self._match(pattern, '-axr')
+    def match(self, pattern, reference=False):
+        return self._match(pattern, '-ax' + ('r' if reference else ''))
 
     def rebuild(self):
         self._shell('gtags -vv', cwd=self.__root)
@@ -107,7 +104,7 @@ class GTagsTest(unittest.TestCase):
 
     def test_reference(self):
         f = TagFile('$HOME/repos/work/val/e4/proto1/')
-        refs = f.rmatch("Exp_IsSkipProgress")
+        refs = f.match("Exp_IsSkipProgress", reference=True)
         assert len(refs) == 22
         assert refs[0]["path"] == "/Users/tabi/Dropbox/repos/work/val/e4/proto1/include/ExpPrivate.h"
         assert refs[0]["linenum"] == '1270'
