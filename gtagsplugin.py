@@ -113,7 +113,8 @@ class GtagsShowSymbols(sublime_plugin.TextCommand):
                 return
 
             def on_select(i):
-                gtags_jump_keyword(view, tags, items[i])
+                if i != -1:
+                    gtags_jump_keyword(view, tags, items[i])
 
             view.window().show_quick_panel(items, on_select)
 
