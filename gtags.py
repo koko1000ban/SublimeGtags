@@ -15,7 +15,7 @@ TAGS_RE = re.compile(
     '(?P<symbol>[^\s]+)\s+'
     '(?P<linenum>[^\s]+)\s+'
     '(?P<path>[^\s]+)\s+'
-    '(?P<fields>.*)'
+    '(?P<signature>.*)'
 )
 
 ENV_PATH = os.environ['PATH']
