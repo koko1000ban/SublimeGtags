@@ -11,7 +11,7 @@ from sublime import status_message
 import gtags
 from gtags import (TagFile, PP, find_tags_root)
 
-setting = sublime.load_settings('GTags.sublime-settings').get # (key, None)
+settings = sublime.load_settings('GTags.sublime-settings')
 ON_LOAD       = sublime_plugin.all_callbacks['on_load']
 
 class one_shot(object):
@@ -59,7 +59,7 @@ def run_on_cwd(dir=None):
         else:
             tags_root = dir[0]
 
-        tags = TagFile(tags_root, setting('extra_tag_paths'))
+        tags = TagFile(tags_root, settings.get('extra_tag_paths'))
         func(view, tags, tags_root)
 
     return wrapper
@@ -83,7 +83,7 @@ class GtagsJumpBack(sublime_plugin.WindowCommand):
             cls.last.append((fn, `view.sel()[0]`))
 
 
-def gtags_jump_keyword(view, keywords, showpanel=False):
+def gtags_jump_keyword(view, keywords, root, showpanel=False):
     def jump(keyword):
         GtagsJumpBack.append(view)
         position = '%s:%d:0' % (
@@ -96,8 +96,12 @@ def gtags_jump_keyword(view, keywords, showpanel=False):
         jump(keywords[index])
 
     if showpanel or len(keywords) > 1:
+        if settings.get('show_relative_paths'):
+            convert_path = lambda path: os.path.relpath(path, root)
+        else:
+            convert_path = os.path.normpath
         data = [
-            [kw['signature'], '%s:%d' % (kw['path'], int(kw['linenum']))]
+            [kw['signature'], '%s:%d' % (convert_path(kw['path']), int(kw['linenum']))]
              for kw in keywords
         ]
         view.window().show_quick_panel(data, on_select)
@@ -116,7 +120,7 @@ class GtagsShowSymbols(sublime_plugin.TextCommand):
 
             def on_select(i):
                 if i != -1:
-                    gtags_jump_keyword(view, tags.match(items[i]))
+                    gtags_jump_keyword(view, tags.match(items[i]), root)
 
             view.window().show_quick_panel(items, on_select)
 
@@ -130,7 +134,7 @@ class GtagsNavigateToDefinition(sublime_plugin.TextCommand):
                 status_message("'%s' is not found on tag." % symbol)
                 return
 
-            gtags_jump_keyword(view, matches)
+            gtags_jump_keyword(view, matches, root)
 
 class GtagsFindReferences(sublime_plugin.TextCommand):
     def run(self, edit):
@@ -142,7 +146,7 @@ class GtagsFindReferences(sublime_plugin.TextCommand):
                 status_message("'%s' is not found on rtag." % symbol)
                 return
 
-            gtags_jump_keyword(view, matches)
+            gtags_jump_keyword(view, matches, root)
 
 
 class GtagsRebuildTags(sublime_plugin.TextCommand):

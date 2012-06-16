@@ -1,7 +1,7 @@
 {
-    //switch debug mode 
-    "debug"           :  false,
+    // show relative paths in keyword jump selection panel
+    "show_relative_paths": true,
 
     // a list of other locations to look up (GTAGSLIBPATH)
-    "extra_tag_paths" : []
+    "extra_tag_paths": []
 }
