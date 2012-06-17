@@ -210,5 +210,5 @@ class GtagsRebuildTags(sublime_plugin.TextCommand):
             thread.start()
             ThreadProgress(thread,
                 'Rebuilding tags on %s' % root,
-                'Tags successfully rebuilt on %s' % root,
+                'Tags rebuilt successfully on %s' % root,
                 'Error while tags rebuilding, see console for details')
