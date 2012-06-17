@@ -131,20 +131,39 @@ def gtags_jump_keyword(view, keywords, root, showpanel=False):
         jump(keywords[0])
 
 
+class ShowSymbolsThread(threading.Thread):
+    def __init__(self, view, tags, root):
+        threading.Thread.__init__(self)
+        self.view = view
+        self.tags = tags
+        self.root = root
+
+    def run(self):
+        symbols = self.tags.start_with('')
+        self.success = len(symbols) > 0
+        if not self.success:
+            return
+
+        def on_select(index):
+            if index != -1:
+                definitions = self.tags.match(symbols[index])
+                gtags_jump_keyword(self.view, definitions, self.root)
+
+        sublime.set_timeout(
+            lambda: self.view.window().show_quick_panel(symbols, on_select), 0)
+
+
 class GtagsShowSymbols(sublime_plugin.TextCommand):
     def run(self, edit):
         @run_on_cwd()
         def and_then(view, tags, root):
-            items = tags.start_with('')
-            if not items:
-                status_message("no items?")
-                return
+            thread = ShowSymbolsThread(view, tags, root)
+            thread.start()
+            ThreadProgress(thread,
+                'Getting symbols on %s' % root,
+                'Symbols have successfully obtained',
+                'No symbols found')
 
-            def on_select(i):
-                if i != -1:
-                    gtags_jump_keyword(view, tags.match(items[i]), root)
-
-            view.window().show_quick_panel(items, on_select)
 
 class GtagsNavigateToDefinition(sublime_plugin.TextCommand):
     def run(self, edit):
