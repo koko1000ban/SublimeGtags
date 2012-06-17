@@ -114,9 +114,8 @@ def gtags_jump_keyword(view, keywords, root, showpanel=False):
         view.window().open_file(position, sublime.ENCODED_POSITION)
 
     def on_select(index):
-        if index == -1:
-            return
-        jump(keywords[index])
+        if index != -1:
+            jump(keywords[index])
 
     if showpanel or len(keywords) > 1:
         if settings.get('show_relative_paths'):
