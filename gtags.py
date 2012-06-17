@@ -37,6 +37,34 @@ def find_tags_root(current, previous=None):
     return find_tags_root(parent, current)
 
 
+class TagSubprocess(object):
+    def __init__(self, **kwargs):
+        self.default_kwargs = kwargs
+        if IS_WINDOWS:
+            self.default_kwargs['shell'] = True
+
+    def create(self, command, **kwargs):
+        final_kwargs = self.default_kwargs
+        final_kwargs.update(kwargs)
+
+        if isinstance(command, basestring):
+            if IS_WINDOWS:
+                command = command.encode('utf-8')
+            command = shlex.split(command)
+
+        return subprocess.Popen(command, **final_kwargs)
+
+    def stdout(self, command, **kwargs):
+        process = self.create(command, stdout=subprocess.PIPE, **kwargs)
+        return process.communicate()[0]
+
+    def call(self, command, **kwargs):
+        process = self.create(command, stderr=subprocess.PIPE, **kwargs)
+        retcode = process.wait()
+        _, stderr = process.communicate()
+        return retcode, stderr
+
+
 class TagFile(object):
     def _expand_path(self, path):
         path = os.path.expandvars(os.path.expanduser(path))
@@ -55,25 +83,14 @@ class TagFile(object):
             self.__env['GTAGSLIBPATH'] = os.pathsep.join(
                 map(self._expand_path, extra_paths))
 
+        self.subprocess = TagSubprocess(env=self.__env)
+
     def start_with(self, prefix):
-        return self._shell('global -c %s' % prefix, stdout=subprocess.PIPE)
-
-    def _shell(self, command, **kwargs):
-        if isinstance(command, basestring):
-            if IS_WINDOWS:
-                command = command.encode('utf-8')
-            command = shlex.split(command)
-
-        if IS_WINDOWS:
-            kwargs['shell'] = True
-
-        process = subprocess.Popen(command, env=self.__env, **kwargs)
-        stdout, _ = process.communicate()
-        return stdout.rstrip().splitlines()
+        return self.subprocess.stdout('global -c %s' % prefix).splitlines()
 
     def _match(self, pattern, options):
-        lines = self._shell('global %s %s' % (options, pattern),
-            stdout=subprocess.PIPE)
+        lines = self.subprocess.stdout(
+            'global %s %s' % (options, pattern)).splitlines()
         matches = []
         for search_obj in (t for t in (TAGS_RE.search(l) for l in lines) if t):
             matches.append(search_obj.groupdict())
@@ -83,7 +100,11 @@ class TagFile(object):
         return self._match(pattern, '-ax' + ('r' if reference else ''))
 
     def rebuild(self):
-        self._shell('gtags -vv', cwd=self.__root)
+        retcode, stderr = self.subprocess.call('gtags -v', cwd=self.__root)
+        success = retcode == 0
+        if not success:
+            print stderr
+        return success
 
 
 class GTagsTest(unittest.TestCase):
