@@ -16,12 +16,17 @@ settings = sublime.load_settings('GTags.sublime-settings')
 
 def run_on_cwd(dir=None):
     window = sublime.active_window()
+
     def wrapper(func):
         view = window.active_view()
-        fname = view.file_name()
+
+        filename = view.file_name()
+        if filename is None:
+            sublime.error_message('Cannot use GNU GLOBAL for non-file')
+            return
 
         if dir is None:
-            tags_root = find_tags_root(dirname(fname))
+            tags_root = find_tags_root(dirname(filename))
             if tags_root is None:
                 sublime.error_message("GTAGS not found. build tags by 'gtags'")
                 return
