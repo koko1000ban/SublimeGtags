@@ -39,6 +39,36 @@ def run_on_cwd(dir=None):
     return wrapper
 
 
+class ThreadProgress(object):
+    def __init__(self, thread, message, success_message, error_message):
+        self.thread = thread
+        self.message = message
+        self.success_message = success_message
+        self.error_message = error_message
+        self.addend = 1
+        self.size = 8
+        sublime.set_timeout(lambda: self.run(0), 100)
+
+    def run(self, i):
+        if not self.thread.is_alive():
+            if hasattr(self.thread, 'success') and not self.thread.success:
+                sublime.status_message(self.error_message)
+            else:
+                sublime.status_message(self.success_message)
+            return
+
+        before = i % self.size
+        after = (self.size - 1) - before
+        sublime.status_message('%s [%s=%s]' % \
+            (self.message, ' ' * before, ' ' * after))
+        if not before:
+            self.addend = 1
+        elif not after:
+            self.addend = -1
+        i += self.addend
+        sublime.set_timeout(lambda: self.run(i), 100)
+
+
 class JumpHistory(object):
     instance = None
 
