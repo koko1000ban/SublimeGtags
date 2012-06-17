@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import threading
 from os.path import join, normpath, dirname
 
 import sublime
@@ -171,10 +172,25 @@ class GtagsFindReferences(sublime_plugin.TextCommand):
             gtags_jump_keyword(view, matches, root)
 
 
+class TagsRebuildThread(threading.Thread):
+    def __init__(self, tags):
+        threading.Thread.__init__(self)
+        self.tags = tags
+
+    def run(self):
+        self.success = self.tags.rebuild()
+
+
 class GtagsRebuildTags(sublime_plugin.TextCommand):
-    def run(self, edit, **args):
-        @run_on_cwd(args.get('dirs'))
+    def run(self, edit, **kwargs):
+        # set root folder if run from sidebar context menu
+        root = kwargs.get('dirs')
+
+        @run_on_cwd(dir=root)
         def and_then(view, tags, root):
-            sublime.status_message("rebuild tags on dir: %s" % root)
-            tags.rebuild()
-            sublime.status_message("build success on dir: %s" % root)
+            thread = TagsRebuildThread(tags)
+            thread.start()
+            ThreadProgress(thread,
+                'Rebuilding tags on %s' % root,
+                'Tags successfully rebuilt on %s' % root,
+                'Error while tags rebuilding, see console for details')
