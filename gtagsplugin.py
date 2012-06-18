@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import threading
 from os.path import join, normpath, dirname
 
 import sublime
@@ -11,96 +12,123 @@ from sublime import status_message
 import gtags
 from gtags import (TagFile, PP, find_tags_root)
 
-setting = sublime.load_settings('GTags.sublime-settings').get # (key, None)
-ON_LOAD       = sublime_plugin.all_callbacks['on_load']
-
-class one_shot(object):
-    def __init__(self):
-        self.callbacks.append(self)
-        self.remove = lambda: self.callbacks.remove(self)
-
-def select(view, region):
-    sel_set = view.sel()
-    sel_set.clear()
-    sel_set.add(region)
-    view.show(region)
-
-def on_load(f=None, window=None, encoded_row_col=True):
-    window = window or sublime.active_window()
-    def wrapper(cb):
-        if not f: return cb(window.active_view())
-        view = window.open_file( normpath(f), encoded_row_col )
-        def wrapped():
-            cb(view)
-
-        if view.is_loading():
-            class set_on_load(one_shot):
-                callbacks = ON_LOAD
-                def on_load(self, view):
-                    try:wrapped()
-                    finally: self.remove()
-
-            set_on_load()
-        else: wrapped()
-    return wrapper
+settings = sublime.load_settings('GTags.sublime-settings')
 
 
 def run_on_cwd(dir=None):
     window = sublime.active_window()
+
     def wrapper(func):
         view = window.active_view()
-        fname = view.file_name()
-        
+
+        filename = view.file_name()
+        if filename is None:
+            sublime.error_message('Cannot use GNU GLOBAL for non-file')
+            return
+
         if dir is None:
-            tags_root = find_tags_root(dirname(fname))
+            tags_root = find_tags_root(dirname(filename))
             if tags_root is None:
                 sublime.error_message("GTAGS not found. build tags by 'gtags'")
                 return
         else:
             tags_root = dir[0]
-            
-        tags = TagFile(tags_root, setting('extra_tag_paths'))
+
+        tags = TagFile(tags_root, settings.get('extra_tag_paths'))
         func(view, tags, tags_root)
 
     return wrapper
 
-class GtagsJumpBack(sublime_plugin.WindowCommand):
-    def run(self, to=None):
-        if not GtagsJumpBack.last: return status_message('JumpBack buffer empty')
-        f, sel = GtagsJumpBack.last.pop()
-        self.jump(f, eval(sel))
-    
-    def jump(self, fn, sel):
-        @on_load(fn)
-        def and_then(view):
-            select(view, sublime.Region(*sel))
-    
-    last    =     []
-    @classmethod
-    def append(cls, view):
-        fn = view.file_name()
-        if fn:
-            cls.last.append((fn, `view.sel()[0]`))
 
-def gtags_jump_keyword(view, tags, keyword_or_items, jump_directly_if_one=False):
-    if isinstance(keyword_or_items, list):
-        items = keyword_or_items
-        pass
-    elif isinstance(keyword_or_items, str):
-        items = tags.match(keyword_or_items)
+class ThreadProgress(object):
+    def __init__(self, thread, message, success_message, error_message):
+        self.thread = thread
+        self.message = message
+        self.success_message = success_message
+        self.error_message = error_message
+        self.addend = 1
+        self.size = 8
+        sublime.set_timeout(lambda: self.run(0), 100)
+
+    def run(self, i):
+        if not self.thread.is_alive():
+            if hasattr(self.thread, 'success') and not self.thread.success:
+                sublime.status_message(self.error_message)
+            else:
+                sublime.status_message(self.success_message)
+            return
+
+        before = i % self.size
+        after = (self.size - 1) - before
+        sublime.status_message('%s [%s=%s]' % \
+            (self.message, ' ' * before, ' ' * after))
+        if not before:
+            self.addend = 1
+        elif not after:
+            self.addend = -1
+        i += self.addend
+        sublime.set_timeout(lambda: self.run(i), 100)
+
+
+class JumpHistory(object):
+    instance = None
+
+    def __init__(self):
+        self._storage = []
+
+    def append(self, view):
+        filename = view.file_name()
+        row, col = view.rowcol(view.sel()[0].begin())
+        self._storage.append('%s:%d:%d' % (filename, row + 1, col + 1))
+
+    def jump_back(self):
+        if self.empty():
+            sublime.status_message('Jump history is empty')
+        else:
+            filename = self._storage.pop()
+            sublime.active_window().open_file(filename, sublime.ENCODED_POSITION)
+
+    def jump_forward(self):
+        sublime.status_message('Not implemented')
+
+    def empty(self):
+        return len(self._storage) == 0
+
+
+def jump_history():
+    if JumpHistory.instance is None:
+        JumpHistory.instance = JumpHistory()
+    return JumpHistory.instance
+
+
+class GtagsJumpBack(sublime_plugin.WindowCommand):
+    def run(self):
+        jump_history().jump_back()
+
+
+def gtags_jump_keyword(view, keywords, root, showpanel=False):
+    def jump(keyword):
+        jump_history().append(view)
+        position = '%s:%d:0' % (
+            os.path.normpath(keyword['path']), int(keyword['linenum']))
+        view.window().open_file(position, sublime.ENCODED_POSITION)
+
+    def on_select(index):
+        if index != -1:
+            jump(keywords[index])
+
+    if showpanel or len(keywords) > 1:
+        if settings.get('show_relative_paths'):
+            convert_path = lambda path: os.path.relpath(path, root)
+        else:
+            convert_path = os.path.normpath
+        data = [
+            [kw['signature'], '%s:%d' % (convert_path(kw['path']), int(kw['linenum']))]
+             for kw in keywords
+        ]
+        view.window().show_quick_panel(data, on_select)
     else:
-        error_message("keyword_or_items's type(%s) is unsupported." % type(keyword_or_items))
-        return
-    
-    def on_select(i):
-        if i != -1:
-            GtagsJumpBack.append(view)
-            view.window().open_file("%s:%d:%d" % (normpath(items[i]['path']), int(items[i]['linenum']), 0), sublime.ENCODED_POSITION)
-    
-    if jump_directly_if_one or len(items) == 1:
-        on_select(0)
-    else:
-        view.window().show_quick_panel(["%s\t%s" % (item['path'], item['fields']) for item in items], on_select)
+        jump(keywords[0])
 
 
 class GtagsShowSymbols(sublime_plugin.TextCommand):
@@ -113,8 +141,9 @@ class GtagsShowSymbols(sublime_plugin.TextCommand):
                 return
 
             def on_select(i):
-                gtags_jump_keyword(view, tags, items[i])
-            
+                if i != -1:
+                    gtags_jump_keyword(view, tags.match(items[i]), root)
+
             view.window().show_quick_panel(items, on_select)
 
 class GtagsNavigateToDefinition(sublime_plugin.TextCommand):
@@ -127,26 +156,40 @@ class GtagsNavigateToDefinition(sublime_plugin.TextCommand):
                 status_message("'%s' is not found on tag." % symbol)
                 return
 
-            gtags_jump_keyword(view, tags, matches)
+            gtags_jump_keyword(view, matches, root)
 
 class GtagsFindReferences(sublime_plugin.TextCommand):
     def run(self, edit):
         @run_on_cwd()
         def and_then(view, tags, root):
             symbol = view.substr(view.word(view.sel()[0]))
-            matches = tags.rmatch(symbol)
+            matches = tags.match(symbol, reference=True)
             if not matches:
                 status_message("'%s' is not found on rtag." % symbol)
                 return
-            
-            gtags_jump_keyword(view, tags, matches)
-    
-        
+
+            gtags_jump_keyword(view, matches, root)
+
+
+class TagsRebuildThread(threading.Thread):
+    def __init__(self, tags):
+        threading.Thread.__init__(self)
+        self.tags = tags
+
+    def run(self):
+        self.success = self.tags.rebuild()
+
+
 class GtagsRebuildTags(sublime_plugin.TextCommand):
-    def run(self, edit, **args):
-        @run_on_cwd(args.get('dirs'))
+    def run(self, edit, **kwargs):
+        # set root folder if run from sidebar context menu
+        root = kwargs.get('dirs')
+
+        @run_on_cwd(dir=root)
         def and_then(view, tags, root):
-            sublime.status_message("rebuild tags on dir: %s" % root)
-            tags.rebuild()
-            sublime.status_message("build success on dir: %s" % root)
-            
+            thread = TagsRebuildThread(tags)
+            thread.start()
+            ThreadProgress(thread,
+                'Rebuilding tags on %s' % root,
+                'Tags successfully rebuilt on %s' % root,
+                'Error while tags rebuilding, see console for details')
