@@ -48,9 +48,7 @@ class TagSubprocess(object):
         final_kwargs.update(kwargs)
 
         if isinstance(command, basestring):
-            if IS_WINDOWS:
-                command = command.encode('utf-8')
-            command = shlex.split(command)
+            command = shlex.split(command.encode('utf-8'))
 
         return subprocess.Popen(command, **final_kwargs)
 
