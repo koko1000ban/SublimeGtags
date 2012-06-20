@@ -58,9 +58,8 @@ class TagSubprocess(object):
 
     def call(self, command, **kwargs):
         process = self.create(command, stderr=subprocess.PIPE, **kwargs)
-        retcode = process.wait()
         _, stderr = process.communicate()
-        return retcode, stderr
+        return process.returncode, stderr
 
 
 class TagFile(object):
