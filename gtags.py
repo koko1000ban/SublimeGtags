@@ -8,6 +8,7 @@ import re
 import shlex
 import subprocess
 import unittest
+import sublime
 
 PP = pprint.PrettyPrinter(indent=4)
 
@@ -46,9 +47,12 @@ class TagSubprocess(object):
     def create(self, command, **kwargs):
         final_kwargs = self.default_kwargs
         final_kwargs.update(kwargs)
-
-        if isinstance(command, basestring):
-            command = shlex.split(command.encode('utf-8'))
+        if int(sublime.version()) >= 3000:
+            if isinstance(command,str):
+                command = shlex.split(command)
+        else:
+            if isinstance(command, basestring):
+                command = shlex.split(command.encode('utf-8'))
 
         return subprocess.Popen(command, **final_kwargs)
 
@@ -83,11 +87,20 @@ class TagFile(object):
         self.subprocess = TagSubprocess(env=self.__env)
 
     def start_with(self, prefix):
-        return self.subprocess.stdout('global -c %s' % prefix).splitlines()
+        if int(sublime.version()) >= 3000:
+            return self.subprocess.stdout('global -c %s' % prefix).decode("utf-8").splitlines()
+        else:
+            return self.subprocess.stdout('global -c %s' % prefix).splitlines()
 
     def _match(self, pattern, options):
-        lines = self.subprocess.stdout(
+        if int(sublime.version()) >= 3000:
+            lines = self.subprocess.stdout(
+            'global %s %s' % (options, pattern)).decode("utf-8").splitlines()
+        else:
+            lines = self.subprocess.stdout(
             'global %s %s' % (options, pattern)).splitlines()
+        
+
         matches = []
         for search_obj in (t for t in (TAGS_RE.search(l) for l in lines) if t):
             matches.append(search_obj.groupdict())
@@ -100,7 +113,7 @@ class TagFile(object):
         retcode, stderr = self.subprocess.call('gtags -v', cwd=self.__root)
         success = retcode == 0
         if not success:
-            print stderr
+            print(stderr)
         return success
 
 
