@@ -9,11 +9,17 @@ Clone this repo directly into your Packages directory.
 
 ##Set Up
 To set-up C/C++ Source Navigation:
+
 1. Install [CTAGS](http://ctags.sourceforge.net)
+
 2. Get [GNU GLOBAL](http://www.gnu.org/software/global/)
+
 3. In terminal cd to downloaded directory, and run command "./configure --with-exuberant-ctags" (This will use the Ctags as a parser for parsing files)
+
 4. Type "make".
+
 5. Type "make install".
+
 6. Now run "gtags -v" in your project folder to create tag files.
 
 ## Settings
