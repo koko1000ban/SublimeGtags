@@ -9,7 +9,7 @@ import sublime_plugin
 from sublime import status_message
 
 # Gtags
-if sublime.version.startswith('2'):
+if sublime.version().startswith('2'):
     import gtags
     from gtags import (TagFile, PP, find_tags_root)
 else:
