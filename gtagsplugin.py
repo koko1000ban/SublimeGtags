@@ -9,8 +9,12 @@ import sublime_plugin
 from sublime import status_message
 
 # Gtags
-import gtags
-from gtags import (TagFile, PP, find_tags_root)
+if sublime.version().startswith('2'):
+    import gtags
+    from gtags import (TagFile, PP, find_tags_root)
+else:
+    import SublimeGtags.gtags
+    from SublimeGtags.gtags import TagFile, PP, find_tags_root
 
 settings = sublime.load_settings('GTags.sublime-settings')
 
